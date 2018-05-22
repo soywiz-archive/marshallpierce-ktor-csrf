@@ -39,12 +39,12 @@ class CsrfProtection(config: Configuration) {
     }
 
     companion object Feature : ApplicationFeature<ApplicationCallPipeline, Configuration, CsrfProtection> {
-        override val key = AttributeKey<CsrfProtection>("CsrfPrevention")
+        override val key = AttributeKey<CsrfProtection>("CsrfProtection")
         override fun install(pipeline: ApplicationCallPipeline, configure: Configuration.() -> Unit): CsrfProtection {
             val config = Configuration().apply(configure)
             val feature = CsrfProtection(config)
 
-            val phase = PipelinePhase("CsrfPrevention")
+            val phase = PipelinePhase("CsrfProtection")
             pipeline.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, phase)
 
             pipeline.intercept(phase) {
@@ -61,7 +61,7 @@ interface RequestValidator {
 }
 
 /**
- * Validates that Origin matches a specific host (presumably, the host that this service is deployed at).
+ * Validates that `Origin` matches a specific host (presumably, the host that this service is deployed at).
  *
  * If port is unspecified here, the urls in the headers will match only if they don't have a port specified either.
  */
@@ -76,7 +76,7 @@ class OriginMatchesKnownHost(scheme: String, host: String, port: Int? = null) : 
 }
 
 /**
- * Validates that the Origin header matches the host specified in the Host header.
+ * Validates that the `Origin` header matches the host specified in the Host header.
  */
 class OriginMatchesHostHeader : RequestValidator {
     override fun validate(headers: Headers): Boolean {
@@ -97,7 +97,10 @@ private fun headerUrl(headers: Headers, name: String): URL? {
     }
 }
 
-class HeaderPresent(val name: String) : RequestValidator {
+/**
+ * Require that the given header be present in each request.
+ */
+class HeaderPresent(private val name: String) : RequestValidator {
     override fun validate(headers: Headers): Boolean {
         return headers.contains(name)
     }

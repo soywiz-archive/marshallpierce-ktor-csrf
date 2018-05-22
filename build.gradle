@@ -1,12 +1,17 @@
 plugins {
-  id "org.jetbrains.kotlin.jvm" version "1.2.41" 
+  id "org.jetbrains.kotlin.jvm" version "1.2.41"
+  id 'maven-publish'
+  id 'net.researchgate.release' version '2.7.0'
+  id 'com.jfrog.bintray' version '1.8.0'
+  id 'com.github.ben-manes.versions' version '0.17.0'
+  id "org.jetbrains.dokka" version "0.9.17"
 }
 
 ext {
   deps = [
-      ktor      : '0.9.2',
-      kotlin    : '1.2.41',
-      junit     : '5.2.0'
+      ktor  : '0.9.2',
+      kotlin: '1.2.41',
+      junit : '5.2.0'
   ]
 }
 
@@ -50,3 +55,56 @@ kotlin {
     coroutines "enable"
   }
 }
+
+task sourceJar(type: Jar, dependsOn: classes) {
+  from sourceSets.main.allSource
+}
+
+task docJar(type: Jar, dependsOn: dokka) {
+  from dokka.outputDirectory
+}
+
+group = 'org.mpierce.ktor.csrf'
+
+publishing {
+  publications {
+    bintray(MavenPublication) {
+      from components.java
+      groupId project.group
+      artifactId project.name
+      version project.version
+
+      artifact sourceJar {
+        classifier 'sources'
+      }
+
+      artifact docJar {
+        classifier 'javadoc'
+      }
+    }
+  }
+}
+
+release {
+  tagTemplate = 'v$version'
+}
+
+bintray {
+  user = rootProject.hasProperty('bintrayUser') ? rootProject.property('bintrayUser') : 'FIXME'
+  key = rootProject.hasProperty('bintrayApiKey') ? rootProject.property('bintrayApiKey') : 'FIXME'
+  publications = ['bintray']
+
+  pkg {
+    repo = 'maven'
+    licenses = ['Copyfree']
+    vcsUrl = 'https://bitbucket.org/marshallpierce/ktor-csrf'
+    name = 'org.mpierce.ktor.csrf:ktor-csrf'
+
+    version {
+      name = project.version
+      released = new Date()
+      vcsTag = 'v' + project.version
+    }
+  }
+}
+

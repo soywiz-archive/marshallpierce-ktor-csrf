@@ -1,8 +1,18 @@
+ [ ![Download](https://api.bintray.com/packages/marshallpierce/maven/ktor-csrf/images/download.svg) ](https://bintray.com/marshallpierce/maven/ktor-csrf/_latestVersion) 
+
 # CSRF protection for Ktor
 
 See https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet and https://seclab.stanford.edu/websec/csrf/csrf.pdf for details on what CSRF is and available countermeasures.
 
 # Usage
+
+Artifacts are available via jcenter:
+
+```
+repositories {
+  jcenter()
+}
+```
 
 Your configuration may vary, but here's a solid starting point: checking that the `Origin` header is your actual site,
  and enforcing that a custom header is present (which your front-end JavaScript/etc is presumably sending).
