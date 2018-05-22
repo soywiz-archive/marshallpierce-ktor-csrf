@@ -15,7 +15,7 @@ import io.ktor.server.testing.withTestApplication
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-internal class CsrfPreventionTest {
+internal class CsrfProtectionTest {
     @Test
     internal fun originMatchesKnownHostWithNoHeadersRejected() {
         simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test"), HttpStatusCode.BadRequest) {
@@ -100,7 +100,7 @@ internal class CsrfPreventionTest {
     internal fun rejectsIfAnyValidatorFails() {
         withTestApplication({
             configureTestEndpoints()
-            install(CsrfPrevention) {
+            install(CsrfProtection) {
                 validate(object : RequestValidator {
                     override fun validate(headers: Headers): Boolean = true
                 })
@@ -120,7 +120,7 @@ internal class CsrfPreventionTest {
     internal fun acceptsIfAllValidatorPass() {
         withTestApplication({
             configureTestEndpoints()
-            install(CsrfPrevention) {
+            install(CsrfProtection) {
                 repeat(2) {
                     validate(object : RequestValidator {
                         override fun validate(headers: Headers): Boolean = true
@@ -139,7 +139,7 @@ internal class CsrfPreventionTest {
                                     requestConfig: TestApplicationRequest.() -> Unit) {
         withTestApplication({
             configureTestEndpoints()
-            install(CsrfPrevention) {
+            install(CsrfProtection) {
                 validate(validator)
             }
         }) {

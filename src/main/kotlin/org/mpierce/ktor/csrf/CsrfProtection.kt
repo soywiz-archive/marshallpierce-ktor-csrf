@@ -16,7 +16,7 @@ import java.net.URL
 /**
  * Ktor feature for CSRF protection.
  */
-class CsrfPrevention(config: Configuration) {
+class CsrfProtection(config: Configuration) {
     private val validators = config.validators.toList()
 
     class Configuration {
@@ -38,11 +38,11 @@ class CsrfPrevention(config: Configuration) {
         }
     }
 
-    companion object Feature : ApplicationFeature<ApplicationCallPipeline, Configuration, CsrfPrevention> {
-        override val key = AttributeKey<CsrfPrevention>("CsrfPrevention")
-        override fun install(pipeline: ApplicationCallPipeline, configure: Configuration.() -> Unit): CsrfPrevention {
+    companion object Feature : ApplicationFeature<ApplicationCallPipeline, Configuration, CsrfProtection> {
+        override val key = AttributeKey<CsrfProtection>("CsrfPrevention")
+        override fun install(pipeline: ApplicationCallPipeline, configure: Configuration.() -> Unit): CsrfProtection {
             val config = Configuration().apply(configure)
-            val feature = CsrfPrevention(config)
+            val feature = CsrfProtection(config)
 
             val phase = PipelinePhase("CsrfPrevention")
             pipeline.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, phase)

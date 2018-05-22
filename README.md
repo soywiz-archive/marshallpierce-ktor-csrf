@@ -8,7 +8,7 @@ Your configuration may vary, but here's a solid starting point: checking that th
  and enforcing that a custom header is present (which your front-end JavaScript/etc is presumably sending).
 
 ```kotlin
-install(CsrfPrevention) {
+install(CsrfProtection) {
     validate(OriginMatchesKnownHost("https", "my-service.com"))
     validate(HeaderPresent("X-Some-Custom-Header-Your-Frontend-Sends"))
 }
