@@ -1,5 +1,5 @@
- [ ![Download](https://api.bintray.com/packages/marshallpierce/maven/ktor-csrf/images/download.svg) ](https://bintray.com/marshallpierce/maven/ktor-csrf/_latestVersion) 
-
+ [ ![Download](https://api.bintray.com/packages/marshallpierce/maven/org.mpierce.ktor.csrf%3Aktor-csrf/images/download.svg) ](https://bintray.com/marshallpierce/maven/org.mpierce.ktor.csrf%3Aktor-csrf/_latestVersion) 
+ 
 # CSRF protection for Ktor
 
 See https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet and https://seclab.stanford.edu/websec/csrf/csrf.pdf for details on what CSRF is and available countermeasures.
