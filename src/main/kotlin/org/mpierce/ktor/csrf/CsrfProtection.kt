@@ -1,14 +1,18 @@
 package org.mpierce.ktor.csrf
 
-import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
 import io.ktor.application.ApplicationFeature
 import io.ktor.application.call
+import io.ktor.application.feature
 import io.ktor.http.Headers
 import io.ktor.http.HttpStatusCode
-import io.ktor.pipeline.PipelineContext
 import io.ktor.pipeline.PipelinePhase
 import io.ktor.response.respond
+import io.ktor.routing.Route
+import io.ktor.routing.RouteSelector
+import io.ktor.routing.RouteSelectorEvaluation
+import io.ktor.routing.RoutingResolveContext
+import io.ktor.routing.application
 import io.ktor.util.AttributeKey
 import java.net.MalformedURLException
 import java.net.URL
@@ -31,28 +35,44 @@ class CsrfProtection(config: Configuration) {
         }
     }
 
-    private suspend fun intercept(context: PipelineContext<Unit, ApplicationCall>) {
-        if (validators.any { !it.validate(context.call.request.headers) }) {
-            context.call.respond(HttpStatusCode.BadRequest)
-            context.finish()
+    internal fun interceptPipeline(pipeline: ApplicationCallPipeline) {
+        pipeline.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, phase)
+        pipeline.intercept(phase) {
+            if (validators.any { !it.validate(call.request.headers) }) {
+                call.response.headers.append("X-CSRF-Rejected", "1")
+                call.respond(HttpStatusCode.BadRequest)
+                finish()
+            }
         }
     }
 
     companion object Feature : ApplicationFeature<ApplicationCallPipeline, Configuration, CsrfProtection> {
         override val key = AttributeKey<CsrfProtection>("CsrfProtection")
+        private val phase = PipelinePhase("CsrfProtection")
+
         override fun install(pipeline: ApplicationCallPipeline, configure: Configuration.() -> Unit): CsrfProtection {
             val config = Configuration().apply(configure)
-            val feature = CsrfProtection(config)
-
-            val phase = PipelinePhase("CsrfProtection")
-            pipeline.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, phase)
-
-            pipeline.intercept(phase) {
-                feature.intercept(this)
-            }
-
-            return feature
+            return CsrfProtection(config)
         }
+    }
+}
+
+/**
+ * Apply CSRF protection (as configured for the feature) to any child routes.
+ *
+ * The CsrfProtection feature must already be installed to use this.
+ */
+fun Route.csrfProtection(build: Route.() -> Unit): Route {
+    val protectedRoute = createChild(CsrfRouteSelector())
+
+    application.feature(CsrfProtection).interceptPipeline(protectedRoute)
+    protectedRoute.build()
+    return protectedRoute
+}
+
+internal class CsrfRouteSelector : RouteSelector(RouteSelectorEvaluation.qualityConstant) {
+    override fun evaluate(context: RoutingResolveContext, segmentIndex: Int): RouteSelectorEvaluation {
+        return RouteSelectorEvaluation.Constant
     }
 }
 

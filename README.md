@@ -22,6 +22,19 @@ install(CsrfProtection) {
     validate(OriginMatchesKnownHost("https", "my-service.com"))
     validate(HeaderPresent("X-Some-Custom-Header-Your-Frontend-Sends"))
 }
+
+// ... configure routing ... 
+
+routing {
+    csrfProtection { 
+        get("/protected") { 
+            // ...
+        }
+    }
+    get("/unprotected") {
+        // ...
+    }
+}
 ```
 
 # Details
