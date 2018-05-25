@@ -20,88 +20,88 @@ internal class CsrfProtectionTest {
 
     @Test
     internal fun originMatchesKnownHostWithNoHeadersRejected() {
-        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test"), HttpStatusCode.BadRequest, {
-        })
+        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test"), HttpStatusCode.BadRequest) {
+        }
     }
 
     @Test
     internal fun originMatchesKnownHostWithInvalidOriginHeaderRejected() {
-        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test"), HttpStatusCode.BadRequest, {
+        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test"), HttpStatusCode.BadRequest) {
             addHeader("Origin", "http://nope.wrong")
-        })
+        }
     }
 
     @Test
     internal fun originMatchesKnownHostWithValidOriginHeaderAccepted() {
-        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test"), HttpStatusCode.NoContent, {
+        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test"), HttpStatusCode.NoContent) {
             addHeader("Origin", "http://csrf.test")
-        })
+        }
     }
 
     @Test
     internal fun originMatchesKnownHostWithPortWithValidOriginHeaderWithPortAccepted() {
-        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test", 1234), HttpStatusCode.NoContent, {
+        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test", 1234), HttpStatusCode.NoContent) {
             addHeader("Origin", "http://csrf.test:1234")
-        })
+        }
     }
 
     @Test
     internal fun originMatchesKnownHostWithPortWithValidOriginHeaderWithoutPortRejected() {
-        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test", 1234), HttpStatusCode.BadRequest, {
+        simpleValidatorTest(OriginMatchesKnownHost("http", "csrf.test", 1234), HttpStatusCode.BadRequest) {
             addHeader("Origin", "http://csrf.test")
-        })
+        }
     }
 
     @Test
     internal fun originMatchesHostHeaderWithNoHeadersRejected() {
-        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.BadRequest, {
-        })
+        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.BadRequest) {
+        }
     }
 
     @Test
     internal fun originMatchesHostHeaderWithNoOriginHeaderRejected() {
-        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.BadRequest, {
+        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.BadRequest) {
             addHeader("Host", "csrf.test")
-        })
+        }
     }
 
     @Test
     internal fun originMatchesHostHeaderWithNoHostHeaderRejected() {
-        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.BadRequest, {
+        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.BadRequest) {
             addHeader("Origin", "http://csrf.test")
-        })
+        }
     }
 
     @Test
     internal fun originMatchesHostHeaderWithInvalidOriginHeaderRejected() {
-        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.BadRequest, {
+        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.BadRequest) {
             addHeader("Host", "csrf.test")
             addHeader("Origin", "http://nope.wrong")
-        })
+        }
     }
 
     @Test
     internal fun originMatchesHostHeaderWithValidOriginHeaderOk() {
-        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.NoContent, {
+        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.NoContent) {
             addHeader("Host", "csrf.test")
             addHeader("Origin", "http://csrf.test")
-        })
+        }
     }
 
     @Test
     internal fun customHeaderPresentWithHeaderOk() {
-        simpleValidatorTest(HeaderPresent("X-Foo"), HttpStatusCode.NoContent, {
+        simpleValidatorTest(HeaderPresent("X-Foo"), HttpStatusCode.NoContent) {
             addHeader("Host", "csrf.test")
             addHeader("X-Foo", "whatever")
-        })
+        }
     }
 
     @Test
     internal fun customHeaderPresentWithoutValidCustomHeaderRejected() {
-        simpleValidatorTest(HeaderPresent("X-Foo"), HttpStatusCode.BadRequest, {
+        simpleValidatorTest(HeaderPresent("X-Foo"), HttpStatusCode.BadRequest) {
             addHeader("Host", "csrf.test")
             addHeader("X-Bar", "whatever")
-        })
+        }
     }
 
     @Test
@@ -145,13 +145,16 @@ internal class CsrfProtectionTest {
 
     @Test
     fun noCsrfProtectionEndpointAccessible() {
-        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.Created, {}, "/noCsrfProtection")
+        simpleValidatorTest(OriginMatchesHostHeader(), HttpStatusCode.Created, path = "/noCsrfProtection") {}
     }
 
-    private fun simpleValidatorTest(validator: RequestValidator,
-                                    statusCode: HttpStatusCode,
-                                    requestConfig: TestApplicationRequest.() -> Unit,
-                                    path: String = "/endpoint") {
+
+    private fun simpleValidatorTest(
+        validator: RequestValidator,
+        statusCode: HttpStatusCode,
+        path: String = "/endpoint",
+        requestConfig: TestApplicationRequest.() -> Unit
+    ) {
         withTestApplication({
             install(CsrfProtection) {
                 validate(validator)
@@ -176,5 +179,4 @@ internal class CsrfProtectionTest {
             }
         }
     }
-
 }
