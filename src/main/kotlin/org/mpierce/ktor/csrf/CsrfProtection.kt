@@ -35,7 +35,8 @@ class CsrfProtection(config: Configuration) {
     }
 
     internal fun interceptPipelineInRoute(route: Route, protected: Boolean) {
-        route.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, PhaseInRoute)
+        route.addPhase(PhaseAfterRoutes)
+        route.insertPhaseBefore(PhaseAfterRoutes, PhaseInRoute)
         route.intercept(PhaseInRoute) {
             call.attributes.put(AttributeCsrfResult, protected)
         }
