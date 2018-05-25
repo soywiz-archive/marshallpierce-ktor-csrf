@@ -1,18 +1,12 @@
 package org.mpierce.ktor.csrf
 
 import io.ktor.application.*
-import io.ktor.http.Headers
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
 import io.ktor.pipeline.*
-import io.ktor.response.respond
-import io.ktor.routing.Route
-import io.ktor.routing.RouteSelector
-import io.ktor.routing.RouteSelectorEvaluation
-import io.ktor.routing.RoutingResolveContext
-import io.ktor.routing.application
-import io.ktor.util.AttributeKey
-import java.net.MalformedURLException
-import java.net.URL
+import io.ktor.response.*
+import io.ktor.routing.*
+import io.ktor.util.*
+import java.net.*
 
 /**
  * Ktor feature for CSRF protection.
@@ -40,31 +34,14 @@ class CsrfProtection(config: Configuration) {
         }
     }
 
-    internal fun interceptPipelineInRoute(pipeline: ApplicationCallPipeline, protected: Boolean) {
-        pipeline.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, PhaseInRoute)
-        pipeline.intercept(PhaseInRoute) {
-            println("interceptPipeline")
-            // Should be executed BEFORE the PhaseAfterRoutes, so the attribute is set
+    internal fun interceptPipelineInRoute(route: Route, protected: Boolean) {
+        route.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, PhaseInRoute)
+        route.intercept(PhaseInRoute) {
             call.attributes.put(AttributeCsrfResult, protected)
         }
     }
 
-    internal fun interceptPipelineAfterRoutes(pipeline: ApplicationCallPipeline) {
-        pipeline.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, PhaseAfterRoutes)
-        pipeline.intercept(PhaseAfterRoutes) {
-            println("interceptPipelineAll")
-            val csrfResult = call.attributes.getOrNull(AttributeCsrfResult)
-            if ((applyToAllRoutes && csrfResult != false) || csrfResult == true) {
-                if (validators.any { !it.validate(call.request.headers) }) {
-                    call.response.headers.append("X-CSRF-Rejected", "1")
-                    call.respond(HttpStatusCode.BadRequest)
-                    finish()
-                }
-            }
-        }
-    }
-
-    companion object Feature : ApplicationFeature<ApplicationCallPipeline, Configuration, CsrfProtection> {
+    companion object Feature : ApplicationFeature<Application, Configuration, CsrfProtection> {
         override val key = AttributeKey<CsrfProtection>("CsrfProtection")
 
         val AttributeCsrfResult = AttributeKey<Boolean>("AttributeCsrfResult")
@@ -72,10 +49,21 @@ class CsrfProtection(config: Configuration) {
         private val PhaseInRoute = PipelinePhase("CsrfProtectionInRoute")
         private val PhaseAfterRoutes = PipelinePhase("CsrfProtectionAfterRoutes")
 
-        override fun install(pipeline: ApplicationCallPipeline, configure: Configuration.() -> Unit): CsrfProtection {
-            return CsrfProtection(Configuration().apply(configure)).apply {
-                interceptPipelineAfterRoutes(pipeline)
+        override fun install(pipeline: Application, configure: Configuration.() -> Unit): CsrfProtection {
+            val csrf = CsrfProtection(Configuration().apply(configure))
+            val routing = pipeline.routing { }
+            routing.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, PhaseAfterRoutes)
+            routing.intercept(PhaseAfterRoutes) {
+                val csrfResult = call.attributes.getOrNull(AttributeCsrfResult)
+                if ((csrf.applyToAllRoutes && csrfResult != false) || csrfResult == true) {
+                    if (csrf.validators.any { !it.validate(call.request.headers) }) {
+                        call.response.headers.append("X-CSRF-Rejected", "1")
+                        call.respond(HttpStatusCode.BadRequest)
+                        finish()
+                    }
+                }
             }
+            return csrf
         }
     }
 }
@@ -158,8 +146,10 @@ class HeaderPresent(private val name: String) : RequestValidator {
 
 }
 
-internal class HostTuple(private val scheme: String, private val host: String,
-                         private val port: Int? = null) {
+internal class HostTuple(
+    private val scheme: String, private val host: String,
+    private val port: Int? = null
+) {
     init {
         if (port != null && port < 0) {
             throw IllegalArgumentException("Port must be nonnegative or null")

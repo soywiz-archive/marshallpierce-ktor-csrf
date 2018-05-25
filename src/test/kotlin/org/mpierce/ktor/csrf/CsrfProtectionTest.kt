@@ -163,11 +163,11 @@ internal class CsrfProtectionTest {
                 }
             }
         }) {
-            //with(handleRequest(HttpMethod.Get, "/endpoint", {})) {
-            //    assertEquals(HttpStatusCode.BadRequest, response.status())
-            //}
             with(handleRequest(HttpMethod.Get, "/noCsrfProtection", {})) {
                 assertEquals(HttpStatusCode.OK, response.status())
+            }
+            with(handleRequest(HttpMethod.Get, "/endpoint", {})) {
+                assertEquals(HttpStatusCode.BadRequest, response.status())
             }
         }
     }
