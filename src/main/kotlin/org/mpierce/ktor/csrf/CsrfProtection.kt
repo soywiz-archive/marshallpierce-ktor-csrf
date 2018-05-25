@@ -1,12 +1,9 @@
 package org.mpierce.ktor.csrf
 
-import io.ktor.application.ApplicationCallPipeline
-import io.ktor.application.ApplicationFeature
-import io.ktor.application.call
-import io.ktor.application.feature
+import io.ktor.application.*
 import io.ktor.http.Headers
 import io.ktor.http.HttpStatusCode
-import io.ktor.pipeline.PipelinePhase
+import io.ktor.pipeline.*
 import io.ktor.response.respond
 import io.ktor.routing.Route
 import io.ktor.routing.RouteSelector
@@ -22,9 +19,17 @@ import java.net.URL
  */
 class CsrfProtection(config: Configuration) {
     private val validators = config.validators.toList()
+    private val applyToAllRoutes = config.applyToAllRoutes
 
     class Configuration {
         val validators = mutableListOf<RequestValidator>()
+
+        internal var applyToAllRoutes = false
+
+        fun applyToAllRoutes() {
+            applyToAllRoutes = true
+        }
+
         /**
          * Validate the request headers with the provided validator.
          *
@@ -35,24 +40,42 @@ class CsrfProtection(config: Configuration) {
         }
     }
 
-    internal fun interceptPipeline(pipeline: ApplicationCallPipeline) {
-        pipeline.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, phase)
-        pipeline.intercept(phase) {
-            if (validators.any { !it.validate(call.request.headers) }) {
-                call.response.headers.append("X-CSRF-Rejected", "1")
-                call.respond(HttpStatusCode.BadRequest)
-                finish()
+    internal fun interceptPipelineInRoute(pipeline: ApplicationCallPipeline, protected: Boolean) {
+        pipeline.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, PhaseInRoute)
+        pipeline.intercept(PhaseInRoute) {
+            println("interceptPipeline")
+            // Should be executed BEFORE the PhaseAfterRoutes, so the attribute is set
+            call.attributes.put(AttributeCsrfResult, protected)
+        }
+    }
+
+    internal fun interceptPipelineAfterRoutes(pipeline: ApplicationCallPipeline) {
+        pipeline.insertPhaseAfter(ApplicationCallPipeline.Infrastructure, PhaseAfterRoutes)
+        pipeline.intercept(PhaseAfterRoutes) {
+            println("interceptPipelineAll")
+            val csrfResult = call.attributes.getOrNull(AttributeCsrfResult)
+            if ((applyToAllRoutes && csrfResult != false) || csrfResult == true) {
+                if (validators.any { !it.validate(call.request.headers) }) {
+                    call.response.headers.append("X-CSRF-Rejected", "1")
+                    call.respond(HttpStatusCode.BadRequest)
+                    finish()
+                }
             }
         }
     }
 
     companion object Feature : ApplicationFeature<ApplicationCallPipeline, Configuration, CsrfProtection> {
         override val key = AttributeKey<CsrfProtection>("CsrfProtection")
-        private val phase = PipelinePhase("CsrfProtection")
+
+        val AttributeCsrfResult = AttributeKey<Boolean>("AttributeCsrfResult")
+
+        private val PhaseInRoute = PipelinePhase("CsrfProtectionInRoute")
+        private val PhaseAfterRoutes = PipelinePhase("CsrfProtectionAfterRoutes")
 
         override fun install(pipeline: ApplicationCallPipeline, configure: Configuration.() -> Unit): CsrfProtection {
-            val config = Configuration().apply(configure)
-            return CsrfProtection(config)
+            return CsrfProtection(Configuration().apply(configure)).apply {
+                interceptPipelineAfterRoutes(pipeline)
+            }
         }
     }
 }
@@ -65,9 +88,17 @@ class CsrfProtection(config: Configuration) {
 fun Route.csrfProtection(build: Route.() -> Unit): Route {
     val protectedRoute = createChild(CsrfRouteSelector())
 
-    application.feature(CsrfProtection).interceptPipeline(protectedRoute)
+    application.feature(CsrfProtection).interceptPipelineInRoute(protectedRoute, protected = true)
     protectedRoute.build()
     return protectedRoute
+}
+
+fun Route.noCsrfProtection(build: Route.() -> Unit): Route {
+    val unprotectedRoute = createChild(CsrfRouteSelector())
+
+    application.feature(CsrfProtection).interceptPipelineInRoute(unprotectedRoute, protected = false)
+    unprotectedRoute.build()
+    return unprotectedRoute
 }
 
 internal class CsrfRouteSelector : RouteSelector(RouteSelectorEvaluation.qualityConstant) {

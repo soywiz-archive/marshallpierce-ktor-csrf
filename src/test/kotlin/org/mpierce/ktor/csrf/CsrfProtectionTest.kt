@@ -6,7 +6,7 @@ import io.ktor.application.install
 import io.ktor.http.Headers
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.response.respond
+import io.ktor.response.*
 import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.testing.TestApplicationRequest
@@ -139,6 +139,35 @@ internal class CsrfProtectionTest {
             with(handleRequest(HttpMethod.Get, "/endpoint") {
             }) {
                 assertEquals(HttpStatusCode.NoContent, response.status())
+            }
+        }
+    }
+
+    @Test
+    fun blackListMode() {
+        withTestApplication({
+            install(CsrfProtection) {
+                applyToAllRoutes()
+                validate(object : RequestValidator {
+                    override fun validate(headers: Headers): Boolean = false
+                })
+            }
+            routing {
+                get("/endpoint") {
+                    call.respondText("this shouldn't happen", status = HttpStatusCode.InternalServerError)
+                }
+                noCsrfProtection {
+                    get("/noCsrfProtection") {
+                        call.respondText("ok", status = HttpStatusCode.OK)
+                    }
+                }
+            }
+        }) {
+            //with(handleRequest(HttpMethod.Get, "/endpoint", {})) {
+            //    assertEquals(HttpStatusCode.BadRequest, response.status())
+            //}
+            with(handleRequest(HttpMethod.Get, "/noCsrfProtection", {})) {
+                assertEquals(HttpStatusCode.OK, response.status())
             }
         }
     }
